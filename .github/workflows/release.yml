@@ -16,13 +16,9 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Build Asset (linux)
-      run: |
-        export GO111MODULE=on
-        GOOS=linux   GOARCH=amd64 go build -o bin/prometheus-aws-discovery-linux-amd64
+      run: GOOS=linux   GOARCH=amd64 go build -o bin/prometheus-aws-discovery-linux-amd64 ./cmd/prometheus-aws-discovery/...
     - name: Build Asset (darwin)
-      run: |
-        export GO111MODULE=on
-        GOOS=darwin  GOARCH=amd64 go build -o bin/prometheus-aws-discovery-darwin-amd64
+      run: GOOS=darwin   GOARCH=amd64 go build -o bin/prometheus-aws-discovery-darwin-amd64 ./cmd/prometheus-aws-discovery/...
 
     - name: Create Release
       id: create_release
