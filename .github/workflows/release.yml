@@ -1,0 +1,65 @@
+on:
+  push:
+    tags:
+    - 'v*'
+name: Handle Release
+jobs:
+  release:
+    name: Create Release on Github
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+  generate:
+    needs: release
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    name: Create and Release artifacts
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: 1.13.x
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Build artifacts (Linux)
+      run: CGO_ENABLED=0 GOOS=linux go build -o . ./...
+      if: ${{ contains(matrix.platform, 'ubuntu') }}
+    - name: Build artifacts (darwin)
+      run: CGO_ENABLED=0 GOOS=darwin go build -o . ./...
+      if: ${{ contains(matrix.platform, 'macos') }}
+    - name: Upload Release Assets (Linux)
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./prometheus-aws-discovery
+        asset_name: prometheus-aws-discovery-linux
+        asset_content_type: application/x-executable
+      if: ${{ contains(matrix.platform, 'ubuntu') }}
+    - name: Upload Release Asset (darwin)
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.release.outputs.upload_url }}
+        asset_path: ./prometheus-aws-discovery
+        asset_name: prometheus-aws-discovery-darwin
+        asset_content_type: application/x-mach-binary
+      if: ${{ contains(matrix.platform, 'macos') }}
+ 
