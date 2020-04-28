@@ -20,6 +20,10 @@ jobs:
     - name: Build Asset (darwin)
       run: GOOS=darwin   GOARCH=amd64 go build -o bin/prometheus-aws-discovery-darwin-amd64 ./cmd/prometheus-aws-discovery/...
 
+    - name: Get tag version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -32,7 +36,7 @@ jobs:
         prerelease: false
         body: |
           Build also available as docker image:
-          `daspawnw/prometheus-aws-discovery:${{ github.ref }}`
+          `daspawnw/prometheus-aws-discovery:${{ steps.get_version.outputs.VERSION }}`
 
     - name: Upload Release Asset (linux)
       uses: actions/upload-release-asset@v1
