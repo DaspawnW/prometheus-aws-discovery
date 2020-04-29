@@ -15,14 +15,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Build Asset (linux)
-      run: GOOS=linux   GOARCH=amd64 go build -o bin/prometheus-aws-discovery-linux-amd64 ./cmd/prometheus-aws-discovery/...
-    - name: Build Asset (darwin)
-      run: GOOS=darwin   GOARCH=amd64 go build -o bin/prometheus-aws-discovery-darwin-amd64 ./cmd/prometheus-aws-discovery/...
-
     - name: Get tag version
       id: get_version
       run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
+    - name: Build Asset (linux)
+      run: CGO_ENABLED=0 GOOS=linux   GOARCH=amd64 go build -ldflags="-X 'main.Version=${{ steps.get_version.outputs.VERSION }}'" -o bin/prometheus-aws-discovery-linux-amd64 ./cmd/prometheus-aws-discovery/...
+    - name: Build Asset (darwin)
+      run: CGO_ENABLED=0 GOOS=darwin   GOARCH=amd64 go build -ldflags="-X 'main.Version=${{ steps.get_version.outputs.VERSION }}'" -o bin/prometheus-aws-discovery-darwin-amd64 ./cmd/prometheus-aws-discovery/...
 
     - name: Create Release
       id: create_release
