@@ -16,6 +16,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var Version = "development"
+
 func init() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
@@ -30,12 +32,18 @@ func main() {
 	configmapName := flag.String("kube-configmap-name", "", "Name of the configmap to create or update with discovery output")
 	configmapKey := flag.String("kube-configmap-key", "", "Name of configmap key to set discovery output to")
 	verbose := flag.Bool("verbose", false, "Print verbose log messages")
+	printVersion := flag.Bool("version", false, "Print version")
 	flag.Parse()
 
 	if *verbose {
 		log.SetLevel(log.DebugLevel)
 	} else {
 		log.SetLevel(log.InfoLevel)
+	}
+
+	if *printVersion {
+		log.Info("Version: " + Version)
+		os.Exit(0)
 	}
 
 	validateArg("outputtype", *outputType, []string{"kubernetes", "file"})
