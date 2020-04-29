@@ -12,7 +12,6 @@ import (
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/output"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/outputfile"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/outputkubernetes"
-	"github.com/google/logger"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -83,7 +82,7 @@ func main() {
 
 func validateArg(field string, arg string, allowedValues []string) {
 	if !sliceContains(arg, allowedValues) {
-		logger.Error(fmt.Sprintf("Field %v has allowed values %v but got %s", field, allowedValues, arg))
+		log.Error(fmt.Sprintf("Field %v has allowed values %v but got %s", field, allowedValues, arg))
 		os.Exit(1)
 	}
 }
