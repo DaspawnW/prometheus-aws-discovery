@@ -45,7 +45,7 @@ func ToJsonString(d DiscoveredInstances) ([]byte, error) {
 }
 
 func labels(tags map[string]string, targetHost string, path string, metricName string) map[string]string {
-	labels := lowerMapKeys(tags)
+	labels := standardizeKeys(tags)
 	labels["__metrics_path__"] = path
 	labels["__address__"] = targetHost
 	if val, ok := labels["name"]; ok {
@@ -55,10 +55,11 @@ func labels(tags map[string]string, targetHost string, path string, metricName s
 	return labels
 }
 
-func lowerMapKeys(tags map[string]string) map[string]string {
+func standardizeKeys(tags map[string]string) map[string]string {
 	lowerMap := map[string]string{}
 	for key, value := range tags {
-		lowerMap[strings.ToLower(key)] = value
+		reducedByEmpty := strings.ReplaceAll(key, " ", "-")
+		lowerMap[strings.ToLower(reducedByEmpty)] = value
 	}
 	return lowerMap
 }
