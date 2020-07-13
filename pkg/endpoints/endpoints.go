@@ -58,8 +58,10 @@ func labels(tags map[string]string, targetHost string, path string, metricName s
 func standardizeKeys(tags map[string]string) map[string]string {
 	lowerMap := map[string]string{}
 	for key, value := range tags {
-		reducedByEmpty := strings.ReplaceAll(key, " ", "-")
-		lowerMap[strings.ToLower(reducedByEmpty)] = value
+		reducedByEmpty := strings.ReplaceAll(key, " ", "")
+		if len(reducedByEmpty) > 0 {
+			lowerMap[strings.ToLower(reducedByEmpty)] = value
+		}
 	}
 	return lowerMap
 }

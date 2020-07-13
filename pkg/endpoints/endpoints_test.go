@@ -9,7 +9,7 @@ func TestToJsonStringHasCorrectContent(t *testing.T) {
 	instanceList := InstanceList()
 
 	returnedJSONContentBytes, _ := ToJsonString(DiscoveredInstances{Instances: instanceList})
-	expectedJSONContent := "[{\"targets\":[\"127.0.0.1:9100\"],\"labels\":{\"__address__\":\"127.0.0.1:9100\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"node_exporter\",\"spot-price\":\"123\"}},{\"targets\":[\"127.0.0.1:8080\"],\"labels\":{\"__address__\":\"127.0.0.1:8080\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"blackbox_exporter\",\"spot-price\":\"123\"}},{\"targets\":[\"127.0.0.2:9100\"],\"labels\":{\"__address__\":\"127.0.0.2:9100\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"2222\",\"instancename\":\"Testinstance2\",\"name\":\"node_exporter\"}}]"
+	expectedJSONContent := "[{\"targets\":[\"127.0.0.1:9100\"],\"labels\":{\"__address__\":\"127.0.0.1:9100\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"node_exporter\",\"spotprice\":\"123\"}},{\"targets\":[\"127.0.0.1:8080\"],\"labels\":{\"__address__\":\"127.0.0.1:8080\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"blackbox_exporter\",\"spotprice\":\"123\"}},{\"targets\":[\"127.0.0.2:9100\"],\"labels\":{\"__address__\":\"127.0.0.2:9100\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"2222\",\"instancename\":\"Testinstance2\",\"name\":\"node_exporter\"}}]"
 
 	if expectedJSONContent != string(returnedJSONContentBytes) {
 		t.Errorf("Expected json string with content %s, but got %s", expectedJSONContent, string(returnedJSONContentBytes))
@@ -49,6 +49,7 @@ func InstanceList() []Instance {
 	tagsI2 := make(map[string]string)
 	tagsI2["Name"] = "Testinstance2"
 	tagsI2["billingnumber"] = "2222"
+	tagsI2[" "] = "empty"
 	metricsI2 := []InstanceMetrics{}
 	m1I2 := InstanceMetrics{
 		Name: "node_exporter",
