@@ -67,6 +67,10 @@ func (d Discovery) filter() []*ec2.Filter {
 			Name:   aws.String("tag-key"),
 			Values: []*string{aws.String(d.tagPrefix + "*")},
 		},
+		{
+			Name:   aws.String("instance-state-name"),
+			Values: []*string{aws.String("running")},
+		},
 	}
 
 	return filters
