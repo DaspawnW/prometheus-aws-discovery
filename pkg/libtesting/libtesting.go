@@ -15,14 +15,16 @@ func InstanceList() []endpoints.Instance {
 	tagsI1["billingnumber"] = "1111"
 	metricsI1 := []endpoints.InstanceMetrics{}
 	m1I1 := endpoints.InstanceMetrics{
-		Name: "node_exporter",
-		Path: "/metrics",
-		Port: 9100,
+		Name:   "node_exporter",
+		Path:   "/metrics",
+		Port:   9100,
+		Scheme: "http",
 	}
 	m2I1 := endpoints.InstanceMetrics{
-		Name: "blackbox_exporter",
-		Path: "/metrics",
-		Port: 8080,
+		Name:   "blackbox_exporter",
+		Path:   "/metrics",
+		Port:   8080,
+		Scheme: "https",
 	}
 	metricsI1 = append(metricsI1, m1I1, m2I1)
 	i1 := endpoints.Instance{
@@ -39,9 +41,10 @@ func InstanceList() []endpoints.Instance {
 	tagsI2["billingnumber"] = "2222"
 	metricsI2 := []endpoints.InstanceMetrics{}
 	m1I2 := endpoints.InstanceMetrics{
-		Name: "node_exporter",
-		Path: "/metrics",
-		Port: 9100,
+		Name:   "node_exporter",
+		Path:   "/metrics",
+		Port:   9100,
+		Scheme: "http",
 	}
 	metricsI2 = append(metricsI2, m1I2)
 	i2 := endpoints.Instance{
@@ -64,7 +67,7 @@ func EC2InstanceList() []*ec2.Instance {
 		Value: aws.String("node_exporter"),
 	}
 	t12 := ec2.Tag{
-		Key:   aws.String("prom/scrape:8080/metrics"),
+		Key:   aws.String("prom/scrape:8080:https/metrics"),
 		Value: aws.String("blackbox_exporter"),
 	}
 	nameTag1 := ec2.Tag{

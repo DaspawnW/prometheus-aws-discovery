@@ -14,9 +14,10 @@ type Instance struct {
 }
 
 type InstanceMetrics struct {
-	Name string
-	Port int64
-	Path string
+	Name   string
+	Port   int64
+	Path   string
+	Scheme string
 }
 
 type DiscoveredInstances struct {
@@ -28,13 +29,13 @@ type outputFormat struct {
 	Labels  map[string]string `json:"labels"`
 }
 
-func ToJsonString(d DiscoveredInstances) ([]byte, error) {
+func ToJSONString(d DiscoveredInstances) ([]byte, error) {
 	outputList := []outputFormat{}
 
 	for _, instance := range d.Instances {
 		for _, metric := range instance.Metrics {
 			targetHost := fmt.Sprintf("%s:%d", instance.PrivateIP, metric.Port)
-			l := labels(instance.Tags, targetHost, metric.Path, metric.Name)
+			l := labels(instance.Tags, targetHost, metric.Path, metric.Name, metric.Scheme)
 
 			output := outputFormat{Targets: []string{targetHost}, Labels: l}
 			outputList = append(outputList, output)
@@ -44,9 +45,10 @@ func ToJsonString(d DiscoveredInstances) ([]byte, error) {
 	return json.Marshal(outputList)
 }
 
-func labels(tags map[string]string, targetHost string, path string, metricName string) map[string]string {
+func labels(tags map[string]string, targetHost string, path string, metricName string, scheme string) map[string]string {
 	labels := standardizeKeys(tags)
 	labels["__metrics_path__"] = path
+	labels["__scheme__"] = scheme
 	labels["__address__"] = targetHost
 	if val, ok := labels["name"]; ok {
 		labels["instancename"] = val

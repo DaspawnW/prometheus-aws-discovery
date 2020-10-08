@@ -112,15 +112,23 @@ func parseMetricEndpoint(key string, value string, prefix string) (*endpoints.In
 	parsedMetric := r.FindStringSubmatch(key)
 
 	if len(parsedMetric) == 3 {
-		parsedPort, err := strconv.ParseInt(parsedMetric[1], 10, 64)
+		//TO BE FAIR, NONE OF THIS IS A GOOD IDEA. THIS IS AT BEST A DIRTY AND FUGLY QUICK FIX. THIS SHOULD BE REFACTORED TO DO SOMETHING REASONABLE
+		var scheme = "http"
+		parsedString := strings.Split(parsedMetric[1], ":")
+		if len(parsedString) == 2 {
+			scheme = parsedString[1]
+		}
+
+		parsedPort, err := strconv.ParseInt(parsedString[0], 10, 64)
 		if err != nil {
 			return nil, err
 		}
 
 		return &endpoints.InstanceMetrics{
-			Name: value,
-			Path: parsedMetric[2],
-			Port: parsedPort,
+			Name:   value,
+			Path:   parsedMetric[2],
+			Port:   parsedPort,
+			Scheme: scheme,
 		}, nil
 	}
 
