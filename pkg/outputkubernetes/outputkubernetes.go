@@ -45,7 +45,7 @@ func NewOutputKubernetes(kubeconfig string, namespace string, cmName string, cmF
 }
 
 func (o OutputKubernetes) Write(instances endpoints.DiscoveredInstances) error {
-	output, err := endpoints.ToJsonString(instances)
+	output, err := endpoints.ToJSONString(instances)
 	if err != nil {
 		log.Error("Failed to convert instances to json string")
 		return err

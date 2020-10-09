@@ -8,8 +8,8 @@ func TestToJsonStringHasCorrectContent(t *testing.T) {
 
 	instanceList := InstanceList()
 
-	returnedJSONContentBytes, _ := ToJsonString(DiscoveredInstances{Instances: instanceList})
-	expectedJSONContent := "[{\"targets\":[\"127.0.0.1:9100\"],\"labels\":{\"__address__\":\"127.0.0.1:9100\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"node_exporter\",\"spotprice\":\"123\"}},{\"targets\":[\"127.0.0.1:8080\"],\"labels\":{\"__address__\":\"127.0.0.1:8080\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"blackbox_exporter\",\"spotprice\":\"123\"}},{\"targets\":[\"127.0.0.2:9100\"],\"labels\":{\"__address__\":\"127.0.0.2:9100\",\"__metrics_path__\":\"/metrics\",\"billingnumber\":\"2222\",\"instancename\":\"Testinstance2\",\"name\":\"node_exporter\"}}]"
+	returnedJSONContentBytes, _ := ToJSONString(DiscoveredInstances{Instances: instanceList})
+	expectedJSONContent := "[{\"targets\":[\"127.0.0.1:9100\"],\"labels\":{\"__address__\":\"127.0.0.1:9100\",\"__metrics_path__\":\"/metrics\",\"__scheme__\":\"http\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"node_exporter\",\"spotprice\":\"123\"}},{\"targets\":[\"127.0.0.1:8080\"],\"labels\":{\"__address__\":\"127.0.0.1:8080\",\"__metrics_path__\":\"/metrics\",\"__scheme__\":\"https\",\"billingnumber\":\"1111\",\"instancename\":\"Testinstance1\",\"name\":\"blackbox_exporter\",\"spotprice\":\"123\"}},{\"targets\":[\"127.0.0.2:9100\"],\"labels\":{\"__address__\":\"127.0.0.2:9100\",\"__metrics_path__\":\"/metrics\",\"__scheme__\":\"http\",\"billingnumber\":\"2222\",\"instancename\":\"Testinstance2\",\"name\":\"node_exporter\"}}]"
 
 	if expectedJSONContent != string(returnedJSONContentBytes) {
 		t.Errorf("Expected json string with content %s, but got %s", expectedJSONContent, string(returnedJSONContentBytes))
@@ -27,14 +27,16 @@ func InstanceList() []Instance {
 	tagsI1["Spot price"] = "123"
 	metricsI1 := []InstanceMetrics{}
 	m1I1 := InstanceMetrics{
-		Name: "node_exporter",
-		Path: "/metrics",
-		Port: 9100,
+		Name:   "node_exporter",
+		Path:   "/metrics",
+		Port:   9100,
+		Scheme: "http",
 	}
 	m2I1 := InstanceMetrics{
-		Name: "blackbox_exporter",
-		Path: "/metrics",
-		Port: 8080,
+		Name:   "blackbox_exporter",
+		Path:   "/metrics",
+		Port:   8080,
+		Scheme: "https",
 	}
 	metricsI1 = append(metricsI1, m1I1, m2I1)
 	i1 := Instance{
@@ -52,9 +54,10 @@ func InstanceList() []Instance {
 	tagsI2[" "] = "empty"
 	metricsI2 := []InstanceMetrics{}
 	m1I2 := InstanceMetrics{
-		Name: "node_exporter",
-		Path: "/metrics",
-		Port: 9100,
+		Name:   "node_exporter",
+		Path:   "/metrics",
+		Port:   9100,
+		Scheme: "http",
 	}
 	metricsI2 = append(metricsI2, m1I2)
 	i2 := Instance{

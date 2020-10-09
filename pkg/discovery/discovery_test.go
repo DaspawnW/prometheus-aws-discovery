@@ -19,9 +19,7 @@ func TestDiscoveryHasCorrectEndpoints(t *testing.T) {
 	if err != nil {
 		t.Error("Failed to discover instances", err)
 	}
-
 	expectedInstanceList := libtesting.InstanceList()
-
 	if !reflect.DeepEqual(expectedInstanceList, returnedInstanceList.Instances) {
 		t.Errorf("Expected instance list %v to equal returned instance list %v", expectedInstanceList, returnedInstanceList)
 	}
