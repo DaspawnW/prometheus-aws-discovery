@@ -6,6 +6,7 @@ require (
 	github.com/aws/aws-sdk-go v1.30.9
 	github.com/golang/protobuf v1.3.3 // indirect
 	github.com/imdario/mergo v0.3.9 // indirect
+	github.com/nsf/jsondiff v0.0.0-20210303162244-6ea32392771e
 	github.com/sirupsen/logrus v1.5.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	k8s.io/api v0.18.2

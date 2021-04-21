@@ -45,7 +45,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	validateArg("outputtype", *outputType, []string{"kubernetes", "file"})
+	validateArg("outputtype", *outputType, []string{"kubernetes", "file", "stdout"})
 
 	awsSession := session.New()
 	awsConfig := &aws.Config{}
@@ -59,18 +59,21 @@ func main() {
 	}
 
 	var o output.Output
-	if *outputType == "kubernetes" {
+	switch *outputType {
+	case "stdout":
+		fmt.Println("OS X.")
+	case "file":
+		log.Info("Configured file as output target")
+		o = outputfile.OutputFile{FilePath: *filePath}
+	default:
 		log.Info("Configured kubernetes as output target")
 		k8s, err := outputkubernetes.NewOutputKubernetes(*kubeconfig, *namespace, *configmapName, *configmapKey)
 		if err != nil {
 			panic(err)
 		}
-
 		o = k8s
-	} else {
-		log.Info("Configured file as output target")
-		o = outputfile.OutputFile{FilePath: *filePath}
 	}
+
 	e := o.Write(*instances)
 	if e != nil {
 		panic(e)
