@@ -6,23 +6,40 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
+	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
+	"github.com/daspawnw/prometheus-aws-discovery/pkg/test"
+	"github.com/mitchellh/mapstructure"
+	"github.com/nsf/jsondiff"
 )
 
 func TestDiscoveryHasCorrectEndpoints(t *testing.T) {
+
+	instances := make([]discovery.Instance, 0)
+	for _, instanceData := range test.Instances {
+		var instance discovery.Instance
+		mapstructure.Decode(instanceData, &instance)
+		instances = append(instances, instance)
+	}
+	testJSONContentBytes, _ := discovery.TargetConfigBytes(instances)
+
 	ec2Client := &MockEC2Client{
 		instances: EC2InstanceList(),
 		err:       nil,
 	}
 	d := &DiscoveryClient{}
 	d = d.newDiscovery(ec2Client, "prom/scrape")
-	_, err := d.getInstances()
+	returnedInstanceList, err := d.getInstances()
 	if err != nil {
 		t.Error("Failed to discover instances", err)
 	}
 
-	// if !reflect.DeepEqual(test.Instances, returnedInstanceList) {
-	// 	t.Errorf("Expected instance list %v to equal returned instance list %v", test.Instances, returnedInstanceList)
-	// }
+	returnedJSONContentBytes, err := discovery.TargetConfigBytes(returnedInstanceList)
+	opts := jsondiff.DefaultConsoleOptions()
+	res, text := jsondiff.Compare(returnedJSONContentBytes, testJSONContentBytes, &opts)
+	if res != 0 {
+		t.Errorf("JSONDiff \n%v \n%v", res, text)
+	}
+
 }
 
 type MockEC2Client struct {
