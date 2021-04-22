@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/output"
-	"github.com/daspawnw/prometheus-aws-discovery/pkg/outputfile"
-	"github.com/daspawnw/prometheus-aws-discovery/pkg/outputkubernetes"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -64,10 +62,10 @@ func main() {
 		fmt.Println("OS X.")
 	case "file":
 		log.Info("Configured file as output target")
-		o = outputfile.OutputFile{FilePath: *filePath}
+		o = output.OutputFile{FilePath: *filePath}
 	default:
 		log.Info("Configured kubernetes as output target")
-		k8s, err := outputkubernetes.NewOutputKubernetes(*kubeconfig, *namespace, *configmapName, *configmapKey)
+		k8s, err := output.NewOutputKubernetes(*kubeconfig, *namespace, *configmapName, *configmapKey)
 		if err != nil {
 			panic(err)
 		}

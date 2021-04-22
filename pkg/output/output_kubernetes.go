@@ -1,11 +1,11 @@
-package outputkubernetes
+package output
 
 import (
 	"context"
 	"io/ioutil"
 	"strings"
 
-	"github.com/daspawnw/prometheus-aws-discovery/pkg/endpoints"
+	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
 	log "github.com/sirupsen/logrus"
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -17,7 +17,7 @@ import (
 )
 
 type OutputKubernetes struct {
-	clientset      kubernetes.Interface
+	Clientset      kubernetes.Interface
 	Namespace      string
 	ConfigMapName  string
 	ConfigMapField string
@@ -37,22 +37,22 @@ func NewOutputKubernetes(kubeconfig string, namespace string, cmName string, cmF
 	}
 
 	return &OutputKubernetes{
-		clientset:      clientset,
+		Clientset:      clientset,
 		ConfigMapField: cmField,
 		ConfigMapName:  cmName,
 		Namespace:      namespace,
 	}, nil
 }
 
-func (o OutputKubernetes) Write(instances endpoints.DiscoveredInstances) error {
-	output, err := endpoints.ToJSONString(instances)
+func (o OutputKubernetes) Write(instances []discovery.Instance) error {
+	output, err := discovery.TargetConfigBytes(instances)
 	if err != nil {
 		log.Error("Failed to convert instances to json string")
 		return err
 	}
 
 	ns := o.getNamespace()
-	cm, err := loadConfigmap(o.clientset, ns, o.ConfigMapName)
+	cm, err := loadConfigmap(o.Clientset, ns, o.ConfigMapName)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			log.Error("Failed to load configmap from k8s", err)
@@ -62,13 +62,13 @@ func (o OutputKubernetes) Write(instances endpoints.DiscoveredInstances) error {
 	}
 
 	if cm != nil {
-		err := updateConfigmap(o.clientset, cm, o.ConfigMapField, string(output))
+		err := updateConfigmap(o.Clientset, cm, o.ConfigMapField, string(output))
 		if err != nil {
 			log.Error("Failed to update configmap")
 		}
 		return err
 	} else {
-		err := createConfigmap(o.clientset, o.ConfigMapName, ns, o.ConfigMapField, string(output))
+		err := createConfigmap(o.Clientset, o.ConfigMapName, ns, o.ConfigMapField, string(output))
 		if err != nil {
 			log.Error("Failed to create configmap")
 		}

@@ -1,62 +1,47 @@
-package libtesting
+package discovery_aws
 
 import (
+	"testing"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/daspawnw/prometheus-aws-discovery/pkg/endpoints"
+	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 )
 
-func InstanceList() []endpoints.Instance {
-	expectedInstanceList := []endpoints.Instance{}
+func TestDiscoveryHasCorrectEndpoints(t *testing.T) {
+	ec2Client := &MockEC2Client{
+		instances: EC2InstanceList(),
+		err:       nil,
+	}
+	d := &DiscoveryClient{}
+	d = d.newDiscovery(ec2Client, "prom/scrape")
+	_, err := d.getInstances()
+	if err != nil {
+		t.Error("Failed to discover instances", err)
+	}
 
-	// Instance 1
-	tagsI1 := make(map[string]string)
-	tagsI1["Name"] = "Testinstance1"
-	tagsI1["billingnumber"] = "1111"
-	metricsI1 := []endpoints.InstanceMetrics{}
-	m1I1 := endpoints.InstanceMetrics{
-		Name:   "node_exporter",
-		Path:   "/metrics",
-		Port:   9100,
-		Scheme: "http",
-	}
-	m2I1 := endpoints.InstanceMetrics{
-		Name:   "blackbox_exporter",
-		Path:   "/metrics",
-		Port:   8080,
-		Scheme: "https",
-	}
-	metricsI1 = append(metricsI1, m1I1, m2I1)
-	i1 := endpoints.Instance{
-		InstanceType: "t2.medium",
-		PrivateIP:    "127.0.0.1",
-		Tags:         tagsI1,
-		Metrics:      metricsI1,
-	}
-	expectedInstanceList = append(expectedInstanceList, i1)
-
-	// Instance 2
-	tagsI2 := make(map[string]string)
-	tagsI2["Name"] = "Testinstance2"
-	tagsI2["billingnumber"] = "2222"
-	metricsI2 := []endpoints.InstanceMetrics{}
-	m1I2 := endpoints.InstanceMetrics{
-		Name:   "node_exporter",
-		Path:   "/metrics",
-		Port:   9100,
-		Scheme: "http",
-	}
-	metricsI2 = append(metricsI2, m1I2)
-	i2 := endpoints.Instance{
-		InstanceType: "t2.small",
-		PrivateIP:    "127.0.0.2",
-		Tags:         tagsI2,
-		Metrics:      metricsI2,
-	}
-	expectedInstanceList = append(expectedInstanceList, i2)
-	return expectedInstanceList
+	// if !reflect.DeepEqual(test.Instances, returnedInstanceList) {
+	// 	t.Errorf("Expected instance list %v to equal returned instance list %v", test.Instances, returnedInstanceList)
+	// }
 }
 
+type MockEC2Client struct {
+	ec2iface.EC2API
+	instances []*ec2.Instance
+	err       error
+}
+
+func (c *MockEC2Client) DescribeInstances(in *ec2.DescribeInstancesInput) (*ec2.DescribeInstancesOutput, error) {
+	var reservations []*ec2.Reservation
+	var reservation ec2.Reservation
+
+	reservation.Instances = c.instances
+	reservations = append(reservations, &reservation)
+
+	return &ec2.DescribeInstancesOutput{
+		Reservations: reservations,
+	}, nil
+}
 func EC2InstanceList() []*ec2.Instance {
 	var instances []*ec2.Instance
 
