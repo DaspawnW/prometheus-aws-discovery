@@ -1,4 +1,4 @@
-package discovery_aws
+package awsdiscovery
 
 import (
 	"testing"
@@ -26,9 +26,12 @@ func TestDiscoveryHasCorrectEndpoints(t *testing.T) {
 		instances: EC2InstanceList(),
 		err:       nil,
 	}
-	d := &DiscoveryClient{}
-	d = d.newDiscovery(ec2Client, "prom/scrape")
-	returnedInstanceList, err := d.getInstances()
+	d := &DiscoveryClientAWS{
+		Ec2Client: ec2Client,
+		TagPrefix: "prom/scrape",
+	}
+
+	returnedInstanceList, err := d.GetInstances()
 	if err != nil {
 		t.Error("Failed to discover instances", err)
 	}

@@ -1,4 +1,4 @@
-package discovery_aws
+package awsdiscovery
 
 import (
 	"errors"
@@ -13,22 +13,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type DiscoveryClient struct {
-	ec2Client ec2iface.EC2API
-	tagPrefix string
+type DiscoveryClientAWS struct {
+	Ec2Client ec2iface.EC2API
+	TagPrefix string
 }
 
-func (d DiscoveryClient) newDiscovery(ec2Client ec2iface.EC2API, tagPrefix string) *DiscoveryClient {
-	d.ec2Client = ec2Client
-	d.tagPrefix = tagPrefix
-	return &d
-}
-
-func (d DiscoveryClient) getInstances() ([]discovery.Instance, error) {
+func (d DiscoveryClientAWS) GetInstances() ([]discovery.Instance, error) {
 	ec2Input := ec2.DescribeInstancesInput{
 		Filters: d.filter(),
 	}
-	output, err := d.ec2Client.DescribeInstances(&ec2Input)
+	output, err := d.Ec2Client.DescribeInstances(&ec2Input)
 	if err != nil {
 		log.Error("Failed to load ec2 instances")
 		return nil, err
@@ -40,14 +34,14 @@ func (d DiscoveryClient) getInstances() ([]discovery.Instance, error) {
 		for _, instance := range res.Instances {
 
 			log.Debugf("Extract metric endpoint(s) from instance with ip %s", *instance.PrivateIpAddress)
-			metricEndpoints := extractMetricEndpoints(instance.Tags, d.tagPrefix)
+			metricEndpoints := extractMetricEndpoints(instance.Tags, d.TagPrefix)
 			endpointCount += len(metricEndpoints)
 			log.Debugf("Instance with ip %s has %d metric endpoint(s)", *instance.PrivateIpAddress, len(metricEndpoints))
 
 			d := discovery.Instance{
 				InstanceType: *instance.InstanceType,
 				PrivateIP:    *instance.PrivateIpAddress,
-				Tags:         cleanupTagList(instance.Tags, d.tagPrefix),
+				Tags:         cleanupTagList(instance.Tags, d.TagPrefix),
 				Metrics:      metricEndpoints,
 			}
 
@@ -58,11 +52,11 @@ func (d DiscoveryClient) getInstances() ([]discovery.Instance, error) {
 	return instances, nil
 }
 
-func (d DiscoveryClient) filter() []*ec2.Filter {
+func (d DiscoveryClientAWS) filter() []*ec2.Filter {
 	filters := []*ec2.Filter{
 		{
 			Name:   aws.String("tag-key"),
-			Values: []*string{aws.String(d.tagPrefix + "*")},
+			Values: []*string{aws.String(d.TagPrefix + "*")},
 		},
 		{
 			Name:   aws.String("instance-state-name"),

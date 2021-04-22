@@ -14,10 +14,10 @@ type Instance struct {
 }
 
 type InstanceMetrics struct {
-	Name   string
-	Port   int64
-	Path   string
-	Scheme string
+	Name   string `json:"name"`
+	Port   int64  `json:"port"`
+	Path   string `json:"path"`
+	Scheme string `json:"scheme"`
 }
 
 type outputFormat struct {

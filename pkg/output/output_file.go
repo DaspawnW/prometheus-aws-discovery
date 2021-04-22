@@ -19,8 +19,10 @@ func (o OutputFile) Write(instances []discovery.Instance) error {
 	}
 
 	e := ioutil.WriteFile(o.FilePath, content, 0666)
+
 	if e != nil {
 		log.Errorf("Failed to write to filepath %s", o.FilePath)
+		return err
 	}
-	return e
+	return nil
 }

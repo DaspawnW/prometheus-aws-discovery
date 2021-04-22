@@ -4,15 +4,16 @@ import (
 	"fmt"
 
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
-	log "github.com/sirupsen/logrus"
 )
 
-func Write(instances []discovery.Instance) error {
-	content, err := discovery.TargetConfigBytes(instances)
+type OutputStdOut struct {
+}
+
+func (o OutputStdOut) Write(instances []discovery.Instance) error {
+	jsonBytes, err := discovery.TargetConfigBytes(instances)
 	if err != nil {
-		log.Error("Failed to convert instances to json string with error", err)
 		return err
 	}
-	fmt.Printf("%v", content)
+	fmt.Printf("Discovered Scrape Configs: \n%v\n", string(jsonBytes))
 	return nil
 }
