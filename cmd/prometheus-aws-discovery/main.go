@@ -35,7 +35,6 @@ func main() {
 	var configmapName string
 	var configmapKey string
 	var subscrID string
-	var rgName string
 
 	flag.StringVar(&tagPrefix, "tagprefix", "prom/scrape", "Prefix used for tag key to filter for exporter")
 	flag.StringVar(&outputType, "output", "kubernetes", "Allowed Values {kubernetes|file}")
@@ -46,7 +45,6 @@ func main() {
 	flag.StringVar(&configmapKey, "kube-configmap-key", "", "Name of configmap key to set discovery output to")
 	flag.StringVar(&iaasCSV, "iaas", "", "CSV of Clouds to check [aws/azure]")
 	flag.StringVar(&subscrID, "azure-subsc", "", "Azure Subscription ID to look for VMs")
-	flag.StringVar(&rgName, "rg", "", "Azure Resource Group Name to look for VMs")
 	verbose := flag.Bool("verbose", false, "Print verbose log messages")
 	printVersion := flag.Bool("version", false, "Print version")
 	flag.Parse()
