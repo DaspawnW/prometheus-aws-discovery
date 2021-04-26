@@ -14,6 +14,7 @@ import (
 
 type DiscoveryClientAZURE struct {
 	TagPrefix    string
+	Tag          string
 	Subscription string
 }
 

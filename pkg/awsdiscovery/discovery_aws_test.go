@@ -26,11 +26,11 @@ func TestDiscoveryHasCorrectEndpoints(t *testing.T) {
 		instances: EC2InstanceList(),
 		err:       nil,
 	}
+
 	d := &DiscoveryClientAWS{
-		Ec2Client: ec2Client,
 		TagPrefix: "prom/scrape",
 	}
-
+	d.SetEC2Client(ec2Client)
 	returnedInstanceList, err := d.GetInstances()
 	if err != nil {
 		t.Error("Failed to discover instances", err)

@@ -7,9 +7,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/awsdiscovery"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/azurediscovery"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
@@ -29,6 +26,7 @@ func main() {
 	var outputType string
 	var iaasCSV string
 	var tagPrefix string
+	var tag string
 	var filePath string
 	var kubeconfig string
 	var namespace string
@@ -37,6 +35,7 @@ func main() {
 	var subscrID string
 
 	flag.StringVar(&tagPrefix, "tagprefix", "prom/scrape", "Prefix used for tag key to filter for exporter")
+	flag.StringVar(&tag, "tag", "prom/scrape", "Prefix used for tag key to filter for exporter")
 	flag.StringVar(&outputType, "output", "kubernetes", "Allowed Values {kubernetes|file}")
 	flag.StringVar(&filePath, "file-path", "", "Target file path to write file to")
 	flag.StringVar(&kubeconfig, "kube-config", "", "Path to a kubeconfig file")
@@ -89,13 +88,10 @@ func main() {
 		case "aws":
 			log.Info("starting aws discovery")
 			validateArg("outputtype", outputType, []string{"kubernetes", "file", "stdout"})
-			awsSession := session.New()
-			awsConfig := &aws.Config{}
-			ec2Client := ec2.New(awsSession, awsConfig)
 			log.Info("Start discovery of ec2 instances")
 			d := awsdiscovery.DiscoveryClientAWS{
-				Ec2Client: ec2Client,
 				TagPrefix: tagPrefix,
+				Tag:       tag,
 			}
 			getOutput(d, o)
 		case "azure":
@@ -103,6 +99,7 @@ func main() {
 
 			d := azurediscovery.DiscoveryClientAZURE{
 				TagPrefix:    tagPrefix,
+				Tag:          tag,
 				Subscription: subscrID,
 			}
 			getOutput(d, o)

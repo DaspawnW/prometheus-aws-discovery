@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/ec2/ec2iface"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
@@ -14,15 +15,27 @@ import (
 )
 
 type DiscoveryClientAWS struct {
-	Ec2Client ec2iface.EC2API
 	TagPrefix string
+	Tag       string
 }
 
+var ec2Client ec2iface.EC2API
+
+func (d DiscoveryClientAWS) SetEC2Client(client ec2iface.EC2API) {
+	ec2Client = client
+}
 func (d DiscoveryClientAWS) GetInstances() ([]discovery.Instance, error) {
+
 	ec2Input := ec2.DescribeInstancesInput{
 		Filters: d.filter(),
 	}
-	output, err := d.Ec2Client.DescribeInstances(&ec2Input)
+	if ec2Client == nil {
+		awsSession := session.New()
+		awsConfig := &aws.Config{}
+		ec2Client = ec2.New(awsSession, awsConfig)
+
+	}
+	output, err := ec2Client.DescribeInstances(&ec2Input)
 	if err != nil {
 		log.Error("Failed to load ec2 instances")
 		return nil, err
