@@ -13,7 +13,7 @@ import (
 )
 
 type DiscoveryClientAZURE struct {
-	TagPrefix    string
+	TagPrefix    bool
 	Tag          string
 	Subscription string
 }
@@ -40,14 +40,14 @@ func (d DiscoveryClientAZURE) GetInstances() ([]discovery.Instance, error) {
 			log.Error(err)
 			return nil, err
 		}
+
 		for _, vmss := range vmssList.Values() {
 			var metrics = []discovery.InstanceMetrics{}
-			if val, ok := vmss.Tags["prom_scrape"]; ok {
+			if val, ok := vmss.Tags[d.Tag]; ok {
 				if !ok {
 					continue
 				}
 				json.Unmarshal([]byte(*val), &metrics)
-				log.Debugf("%v", metrics)
 			}
 
 			log.Debugf("Found VMSS: %v\n", *vmss.Name)

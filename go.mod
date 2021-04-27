@@ -10,6 +10,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.25
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/golang/protobuf v1.3.3 // indirect
+	github.com/google/martian v2.1.0+incompatible
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/nsf/jsondiff v0.0.0-20210303162244-6ea32392771e

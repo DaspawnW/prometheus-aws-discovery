@@ -24,6 +24,7 @@ func TestJSONStringHasCorrectContent(t *testing.T) {
 	if res != 0 {
 		t.Errorf("JSONDiff \n%v \n%v", res, text)
 	}
+
 	badJSON := []map[string]interface{}{
 		{
 			"targets": []string{

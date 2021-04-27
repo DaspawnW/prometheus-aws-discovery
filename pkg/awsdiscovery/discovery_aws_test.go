@@ -12,15 +12,17 @@ import (
 	"github.com/nsf/jsondiff"
 )
 
-func TestDiscoveryHasCorrectEndpoints(t *testing.T) {
+func TestDiscoveryHasCorrectEndpointsV1(t *testing.T) {
+	opts := jsondiff.DefaultConsoleOptions()
 
-	instances := make([]discovery.Instance, 0)
+	scrapeTargets := make([]discovery.Instance, 0)
+
 	for _, instanceData := range test.Instances {
 		var instance discovery.Instance
 		mapstructure.Decode(instanceData, &instance)
-		instances = append(instances, instance)
+		scrapeTargets = append(scrapeTargets, instance)
 	}
-	testJSONContentBytes, _ := discovery.TargetConfigBytes(instances)
+	testJSONContentBytes, _ := discovery.TargetConfigBytes(scrapeTargets)
 
 	ec2Client := &MockEC2Client{
 		instances: EC2InstanceList(),
@@ -28,19 +30,65 @@ func TestDiscoveryHasCorrectEndpoints(t *testing.T) {
 	}
 
 	d := &DiscoveryClientAWS{
-		TagPrefix: "prom/scrape",
-	}
-	d.SetEC2Client(ec2Client)
-	returnedInstanceList, err := d.GetInstances()
-	if err != nil {
-		t.Error("Failed to discover instances", err)
+		TagPrefix: true,
+		Tag:       "prom/scrape",
 	}
 
-	returnedJSONContentBytes, err := discovery.TargetConfigBytes(returnedInstanceList)
-	opts := jsondiff.DefaultConsoleOptions()
-	res, text := jsondiff.Compare(returnedJSONContentBytes, testJSONContentBytes, &opts)
+	d.SetEC2Client(ec2Client)
+	scrapeTargets, err := d.GetInstances()
+	if err != nil {
+		t.Errorf("Failed to discover instances %v", err)
+	}
+
+	scrapeTargetBytes, err := discovery.TargetConfigBytes(scrapeTargets)
+	if err != nil {
+		t.Errorf("TargetConfigBytes %v", err)
+	}
+	res, diff := jsondiff.Compare(scrapeTargetBytes, testJSONContentBytes, &opts)
 	if res != 0 {
-		t.Errorf("JSONDiff \n%v \n%v", res, text)
+		t.Errorf("JSONDiff V2 Tag \n%v \n%v", res, diff)
+	}
+
+}
+func TestDiscoveryHasCorrectEndpointsV2(t *testing.T) {
+	opts := jsondiff.DefaultConsoleOptions()
+
+	ec2Client := &MockEC2Client{
+		instances: EC2InstanceList(),
+		err:       nil,
+	}
+
+	d := &DiscoveryClientAWS{
+		TagPrefix: false,
+		Tag:       "prom",
+	}
+	d.SetEC2Client(ec2Client)
+
+	scrapeTargets, err := d.parseScrapeConfigs(EC2InstanceList())
+	if err != nil {
+		t.Errorf("parseScrapeConfigsError %v", err)
+	}
+	if len(scrapeTargets) != 3 {
+		t.Errorf("Expected three Instances Targets")
+	}
+	if len(scrapeTargets[0].Metrics)+len(scrapeTargets[1].Metrics) != 0 {
+		t.Errorf("Expected first and Second Instance to not have Targets")
+	}
+	if len(scrapeTargets[2].Metrics) != 2 {
+		t.Errorf("Expected third to have two Targets")
+	}
+
+	scrapeTargetBytes, err := discovery.TargetConfigBytes(scrapeTargets)
+	if err != nil {
+
+		t.Errorf("TargetConfigBytes %v", err)
+	}
+	testJSONContentBytes, _ := discovery.TargetConfigBytes(scrapeTargets)
+
+	res, diff := jsondiff.Compare(scrapeTargetBytes, testJSONContentBytes, &opts)
+	if res != 0 {
+		t.Log("Expected JSON Strings to match")
+		t.Errorf("JSONDiff V2 Tag \n%v \n%v", res, diff)
 	}
 
 }
@@ -66,56 +114,74 @@ func EC2InstanceList() []*ec2.Instance {
 	var instances []*ec2.Instance
 
 	// instance 1
-	var tagsInstance1 []*ec2.Tag
-	t11 := ec2.Tag{
-		Key:   aws.String("prom/scrape:9100/metrics"),
-		Value: aws.String("node_exporter"),
-	}
-	t12 := ec2.Tag{
-		Key:   aws.String("prom/scrape:8080:https/metrics"),
-		Value: aws.String("blackbox_exporter"),
-	}
-	nameTag1 := ec2.Tag{
-		Key:   aws.String("Name"),
-		Value: aws.String("Testinstance1"),
-	}
-	additionalTag1 := ec2.Tag{
-		Key:   aws.String("billingnumber"),
-		Value: aws.String("1111"),
-	}
-	tagsInstance1 = append(tagsInstance1, &t11, &t12, &nameTag1, &additionalTag1)
-	i1 := ec2.Instance{
+	instances = append(instances, &ec2.Instance{
 		InstanceType:     aws.String("t2.medium"),
 		PrivateIpAddress: aws.String("127.0.0.1"),
-		Tags:             tagsInstance1,
-	}
-	instances = append(instances, &i1)
+		Tags: []*ec2.Tag{
+			{
+				Key:   aws.String("prom/scrape:9100/metrics"),
+				Value: aws.String("node_exporter"),
+			},
+
+			{
+				Key:   aws.String("prom/scrape:8080:https/metrics"),
+				Value: aws.String("blackbox_exporter"),
+			},
+			{
+				Key:   aws.String("Name"),
+				Value: aws.String("Testinstance1"),
+			},
+			{
+				Key:   aws.String("billingnumber"),
+				Value: aws.String("1111"),
+			},
+		},
+	})
 
 	// instance 2
-	var tagsInstance2 []*ec2.Tag
-	t21 := ec2.Tag{
-		Key:   aws.String("prom/scrape:9100/metrics"),
-		Value: aws.String("node_exporter"),
-	}
-	nameTag2 := ec2.Tag{
-		Key:   aws.String("Name"),
-		Value: aws.String("Testinstance2"),
-	}
-	additionalTag2 := ec2.Tag{
-		Key:   aws.String("billingnumber"),
-		Value: aws.String("2222"),
-	}
-	exceptionTag := ec2.Tag{
-		Key:   aws.String("prom/scrape:8888"),
-		Value: aws.String("test_exporter"),
-	}
-	tagsInstance2 = append(tagsInstance2, &t21, &nameTag2, &additionalTag2, &exceptionTag)
-	i2 := ec2.Instance{
+	instances = append(instances, &ec2.Instance{
 		InstanceType:     aws.String("t2.small"),
 		PrivateIpAddress: aws.String("127.0.0.2"),
-		Tags:             tagsInstance2,
-	}
-	instances = append(instances, &i2)
+		Tags: []*ec2.Tag{
+			{
+				Key:   aws.String("prom/scrape:9100/metrics"),
+				Value: aws.String("node_exporter"),
+			},
+			{
+				Key:   aws.String("Name"),
+				Value: aws.String("Testinstance2"),
+			},
+			{
+				Key:   aws.String("billingnumber"),
+				Value: aws.String("2222"),
+			},
+			{
+				Key:   aws.String("prom/scrape:8888"),
+				Value: aws.String("test_exporter"),
+			},
+		},
+	})
+	//instance v2 tags
+	//
+	// instance 3
+	instances = append(instances, &ec2.Instance{
+		InstanceType:     aws.String("t2.small"),
+		PrivateIpAddress: aws.String("127.0.0.2"),
+		Tags: []*ec2.Tag{
+			{
+				Key:   aws.String("prom"),
+				Value: aws.String(test.V2TagValue),
+			},
+			{
+				Key:   aws.String("Name"),
+				Value: aws.String("Testinstance3"),
+			},
+			{
+				Key:   aws.String("billingnumber"),
+				Value: aws.String("2222"),
+			},
+		},
+	})
 
 	return instances
 }

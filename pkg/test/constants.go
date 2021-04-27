@@ -1,5 +1,6 @@
 package test
 
+var V2TagValue = `[{"name": "gcbi-ref-vault","port": 9100,"path": "metrics","scheme": "https"},{"name": "gcbi-ref-node","port": 8080,"path": "node","scheme": "http"}]`
 var Targets = []map[string]interface{}{
 	{
 		"targets": []string{
@@ -77,5 +78,13 @@ var Instances = []map[string]interface{}{
 				"Scheme": "http",
 			},
 		},
+	}, {
+		"InstanceType": "t2.small",
+		"PrivateIP":    "127.0.0.2",
+		"Tags": map[string]string{
+			"Name":          "Testinstance3",
+			"billingnumber": "2222",
+		},
+		"Metrics": make(map[string]interface{}, 0),
 	},
 }

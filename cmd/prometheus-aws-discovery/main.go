@@ -25,7 +25,7 @@ func init() {
 func main() {
 	var outputType string
 	var iaasCSV string
-	var tagPrefix string
+	tagPrefix := false
 	var tag string
 	var filePath string
 	var kubeconfig string
@@ -34,8 +34,8 @@ func main() {
 	var configmapKey string
 	var subscrID string
 
-	flag.StringVar(&tagPrefix, "tagprefix", "prom/scrape", "Prefix used for tag key to filter for exporter")
-	flag.StringVar(&tag, "tag", "prom/scrape", "Prefix used for tag key to filter for exporter")
+	flag.StringVar(&tag, "tagprefix", "prom/scrape", "Prefix used for tag key to filter for exporter")
+	flag.StringVar(&tag, "tag", "", "Prefix used for tag key to filter for exporter")
 	flag.StringVar(&outputType, "output", "kubernetes", "Allowed Values {kubernetes|file}")
 	flag.StringVar(&filePath, "file-path", "", "Target file path to write file to")
 	flag.StringVar(&kubeconfig, "kube-config", "", "Path to a kubeconfig file")
@@ -48,6 +48,12 @@ func main() {
 	printVersion := flag.Bool("version", false, "Print version")
 	flag.Parse()
 
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "tagprefix" {
+			tagPrefix = true
+
+		}
+	})
 	if *verbose {
 		log.SetLevel(log.DebugLevel)
 	} else {

@@ -1,6 +1,7 @@
 package awsdiscovery
 
 import (
+	"encoding/json"
 	"errors"
 	"regexp"
 	"strconv"
@@ -15,7 +16,7 @@ import (
 )
 
 type DiscoveryClientAWS struct {
-	TagPrefix string
+	TagPrefix bool
 	Tag       string
 }
 
@@ -33,43 +34,52 @@ func (d DiscoveryClientAWS) GetInstances() ([]discovery.Instance, error) {
 		awsSession := session.New()
 		awsConfig := &aws.Config{}
 		ec2Client = ec2.New(awsSession, awsConfig)
-
 	}
-	output, err := ec2Client.DescribeInstances(&ec2Input)
+	ec2DescrRes, err := ec2Client.DescribeInstances(&ec2Input)
 	if err != nil {
 		log.Error("Failed to load ec2 instances")
 		return nil, err
 	}
-
-	instances := []discovery.Instance{}
-	endpointCount := 0
-	for _, res := range output.Reservations {
+	ec2InstanceList := []*ec2.Instance{}
+	for _, res := range ec2DescrRes.Reservations {
 		for _, instance := range res.Instances {
-
-			log.Debugf("Extract metric endpoint(s) from instance with ip %s", *instance.PrivateIpAddress)
-			metricEndpoints := extractMetricEndpoints(instance.Tags, d.TagPrefix)
-			endpointCount += len(metricEndpoints)
-			log.Debugf("Instance with ip %s has %d metric endpoint(s)", *instance.PrivateIpAddress, len(metricEndpoints))
-
-			d := discovery.Instance{
-				InstanceType: *instance.InstanceType,
-				PrivateIP:    *instance.PrivateIpAddress,
-				Tags:         cleanupTagList(instance.Tags, d.TagPrefix),
-				Metrics:      metricEndpoints,
-			}
-
-			instances = append(instances, d)
+			ec2InstanceList = append(ec2InstanceList, instance)
 		}
 	}
+
+	return d.parseScrapeConfigs(ec2InstanceList)
+}
+
+func (d DiscoveryClientAWS) parseScrapeConfigs(ec2Instances []*ec2.Instance) ([]discovery.Instance, error) {
+	endpointCount := 0
+	var instances []discovery.Instance
+	for _, ec2Instance := range ec2Instances {
+
+		log.Debugf("Extract metric endpoint(s) from instance with ip %s", *ec2Instance.PrivateIpAddress)
+
+		metricEndpoints, err := extractMetricEndpoints(ec2Instance.Tags, d.Tag, d.TagPrefix)
+		if err != nil {
+			return nil, err
+		}
+		endpointCount += len(metricEndpoints)
+		log.Debugf("Instance with ip %s has %d metric endpoint(s)", *ec2Instance.PrivateIpAddress, len(metricEndpoints))
+
+		instances = append(instances, discovery.Instance{
+			InstanceType: *ec2Instance.InstanceType,
+			PrivateIP:    *ec2Instance.PrivateIpAddress,
+			Tags:         cleanupTagList(ec2Instance.Tags, d.Tag),
+			Metrics:      metricEndpoints,
+		})
+	}
+
 	log.Infof("Discovered %d instance(s) with %d endpoint(s)", len(instances), endpointCount)
 	return instances, nil
 }
-
 func (d DiscoveryClientAWS) filter() []*ec2.Filter {
 	filters := []*ec2.Filter{
 		{
 			Name:   aws.String("tag-key"),
-			Values: []*string{aws.String(d.TagPrefix + "*")},
+			Values: []*string{aws.String(d.Tag + "*")},
 		},
 		{
 			Name:   aws.String("instance-state-name"),
@@ -93,22 +103,34 @@ func cleanupTagList(tags []*ec2.Tag, prefix string) map[string]string {
 	return tagMap
 }
 
-func extractMetricEndpoints(tags []*ec2.Tag, prefix string) []discovery.InstanceMetrics {
+func extractMetricEndpoints(tags []*ec2.Tag, promTagValue string, prefix bool) ([]discovery.InstanceMetrics, error) {
 	metrics := []discovery.InstanceMetrics{}
-
 	for _, tag := range tags {
-		if matchKeyPattern(*tag.Key, prefix) {
-			parsedMetric, err := parseMetricEndpoint(*tag.Key, *tag.Value, prefix)
-			if err != nil {
-				log.Error("Failed to parse Tag, skip metric", err)
-				continue
-			}
+		if prefix == true {
+			//TODO Change to multi v2 tag lookup once migration of existing deployments is done
 
-			metrics = append(metrics, *parsedMetric)
+			if matchKeyPattern(*tag.Key, promTagValue) {
+				parsedMetric, err := parseMetricEndpoint(*tag.Key, *tag.Value, promTagValue)
+				if err != nil {
+					log.Error("Failed to parse Tag, skip metric", err)
+					continue
+				}
+
+				metrics = append(metrics, *parsedMetric)
+			}
+			continue
+
+		}
+		if *tag.Key == promTagValue {
+			log.Debugf("Key %v is v2 tag with Value \n %v", *tag.Key, *tag.Value)
+			err := json.Unmarshal([]byte(*tag.Value), &metrics)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	return metrics
+	return metrics, nil
 }
 
 func parseMetricEndpoint(key string, value string, prefix string) (*discovery.InstanceMetrics, error) {
