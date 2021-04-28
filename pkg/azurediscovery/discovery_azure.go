@@ -53,53 +53,57 @@ func (d DiscoveryClientAZURE) GetInstances() ([]discovery.Instance, error) {
 			log.Debugf("Found VMSS: %v\n", *vmss.Name)
 			rg := strings.Split(*vmss.ID, "/")[4]
 			log.Debugf("VMSS RG: %v\n", rg)
-			for vmssInstance, err := vmssinstanceClient.ListComplete(context.Background(), rg, *vmss.Name, "", "", ""); vmssInstance.NotDone(); err = vmssInstance.Next() {
+			//InterfaceIPConfiguration InterfaceIPConfigurationPropertiesFormat
+			for interfaceList, err := interfacesClient.ListVirtualMachineScaleSetNetworkInterfaces(context.Background(), rg, *vmss.Name); interfaceList.NotDone(); err = interfaceList.Next() {
 				if err != nil {
 					log.Error(err)
 					return nil, err
 				}
 
-				// print out the list of VMs per vmssInstance
-				log.Debugf("Instance ID %v", *vmssInstance.Value().ID)
-				if err != nil {
-					log.Error(err)
-					return nil, err
-				}
-				//InterfaceIPConfiguration InterfaceIPConfigurationPropertiesFormat
-				for interfaceList, err := interfacesClient.ListVirtualMachineScaleSetNetworkInterfaces(context.Background(), rg, *vmss.Name); interfaceList.NotDone(); err = interfaceList.Next() {
+				for _, interfaceValue := range interfaceList.Values() {
+					//IPConfigurationPropertiesFormat
+					log.Debugf("Interface IPConfigs %v", &interfaceValue)
+					tagsBytes, err := json.Marshal(&vmss.Tags)
 					if err != nil {
 						log.Error(err)
 						return nil, err
 					}
-					for _, interfaceValue := range interfaceList.Values() {
-						//IPConfigurationPropertiesFormat
-						log.Debugf("Interface IPConfigs")
-						tagsBytes, err := json.Marshal(&vmss.Tags)
-						if err != nil {
-							log.Error(err)
-							return nil, err
-						}
-						var tags map[string]string
-						err = json.Unmarshal(tagsBytes, &tags)
-						if err != nil {
-							log.Error(err)
-							return nil, err
-						}
-						log.Debugf("Tags: %v", tags)
-						for _, ipConfigValue := range *interfaceValue.IPConfigurations {
-							targetInstance := discovery.Instance{
-								PrivateIP:    *ipConfigValue.PrivateIPAddress,
-								InstanceType: *vmss.Name,
-								Tags:         tags,
-								Metrics:      metrics,
-							}
-							targetInstances = append(targetInstances, targetInstance)
-						}
+					var tags map[string]string
+					err = json.Unmarshal(tagsBytes, &tags)
+					if err != nil {
+						log.Error(err)
+						return nil, err
+					}
+					log.Debugf("Tags: %v", tags)
 
+					for _, ipConfigValue := range *interfaceValue.IPConfigurations {
+						log.Debugf("ipConfiguration: %v", *ipConfigValue.PrivateIPAddress)
+						targetInstance := discovery.Instance{
+							PrivateIP:    *ipConfigValue.PrivateIPAddress,
+							InstanceType: *vmss.Name,
+							Tags:         tags,
+							Metrics:      metrics,
+						}
+						targetInstances = append(targetInstances, targetInstance)
 					}
 
 				}
+
 			}
+			// for vmssInstance, err := vmssinstanceClient.ListComplete(context.Background(), rg, *vmss.Name, "", "", ""); vmssInstance.NotDone(); err = vmssInstance.Next() {
+			// 	if err != nil {
+			// 		log.Error(err)
+			// 		return nil, err
+			// 	}
+
+			// 	// print out the ID of vmssInstance
+			// 	log.Debugf("Instance ID %v", *vmssInstance.Value().ID)
+			// 	if err != nil {
+			// 		log.Error(err)
+			// 		return nil, err
+			// 	}
+
+			// }
 		}
 	}
 
