@@ -41,7 +41,7 @@ func main() {
 	flag.StringVar(&namespace, "kube-namespace", "", "Namespace where to create or update configmap (If in cluster and no namespace is provided it tries to detect namespace from incluster config otherwise it uses 'default' namespace)")
 	flag.StringVar(&configmapName, "kube-configmap-name", "", "Name of the configmap to create or update with discovery output")
 	flag.StringVar(&configmapKey, "kube-configmap-key", "", "Name of configmap key to set discovery output to")
-	flag.StringVar(&iaasCSV, "iaas", "aws", "CSV of Clouds to check [aws/azure]")
+	flag.StringVar(&iaasCSV, "iaas", "aws", "CSV of Clouds to check [aws/azure] e.g. aws,azure ")
 	flag.StringVar(&subscrID, "azure-subscr", "", "Azure Subscription ID to look for VMs")
 	verbose := flag.Bool("verbose", false, "Print verbose log messages")
 	printVersion := flag.Bool("version", false, "Print version")
@@ -88,29 +88,31 @@ func main() {
 
 	for _, runInfra := range records[0] {
 		log.Info(runInfra)
+		clients := []discovery.DiscoveryClient{}
 		switch runInfra {
 		case "aws":
 			log.Info("starting aws discovery")
 			validateArg("outputtype", outputType, []string{"kubernetes", "file", "stdout"})
 			log.Info("Start discovery of ec2 instances")
-			d := awsdiscovery.DiscoveryClientAWS{
+			clients = append(clients, &awsdiscovery.DiscoveryClientAWS{
 				TagPrefix: tagPrefix,
 				Tag:       tag,
-			}
-			getOutput(d, o)
+			})
+
 		case "azure":
 			log.Info("starting azure discovery")
 			if subscrID == "" {
 				log.Errorf("Azure set as target but no subscription provided. Use --azure-subscr")
 				os.Exit(1)
 			}
-			d := azurediscovery.DiscoveryClientAZURE{
+			clients = append(clients, azurediscovery.DiscoveryClientAZURE{
 				TagPrefix:    tagPrefix,
 				Tag:          tag,
 				Subscription: subscrID,
-			}
-			getOutput(d, o)
+			})
+
 		}
+		getOutput(clients, o)
 	}
 
 }
@@ -129,14 +131,18 @@ func sliceContains(arg string, allowedValues []string) bool {
 	}
 	return false
 }
-func getOutput(client discovery.DiscoveryClient, output output.Output) {
-	instances, err := client.GetInstances()
-	if err != nil {
-		log.Error(err)
+func getOutput(clients []discovery.DiscoveryClient, output output.Output) {
+	outputInstances := []discovery.Instance{}
+	for _, d := range clients {
+		instances, err := d.GetInstances()
+		if err != nil {
+			log.Error(err)
+		}
+		outputInstances = append(outputInstances, instances...)
 	}
 	log.Debug("Writing output\n")
-	e := output.Write(instances)
-	if e != nil {
+	err := output.Write(outputInstances)
+	if err != nil {
 		log.Error(err)
 		os.Exit(1)
 	}
