@@ -1,6 +1,6 @@
 package test
 
-var V2TagValue = `[{"name": "gcbi-ref-vault","port": 9100,"path": "metrics","scheme": "https"},{"name": "gcbi-ref-node","port": 8080,"path": "node","scheme": "http"}]`
+var V2TagValue = `[{"name": "ref-test","port": 9100,"path": "metrics","scheme": "https"},{"name": "ref-node","port": 8080,"path": "node","scheme": "http"}]`
 var Targets = []map[string]interface{}{
 	{
 		"targets": []string{

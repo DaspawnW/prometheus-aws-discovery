@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 
@@ -34,16 +33,16 @@ func main() {
 	var configmapKey string
 	var subscrID string
 
-	flag.StringVar(&tag, "tagprefix", "prom/scrape", "Prefix used for tag key to filter for exporter")
-	flag.StringVar(&tag, "tag", "", "Prefix used for tag key to filter for exporter")
+	flag.StringVar(&tag, "tagprefix", "prom/scrape", "Tag-Key-Prefix used for exporter config (V1-Tag)")
+	flag.StringVar(&tag, "tag", "", "Tag-Key used to look for exporter data (V2-Tag)")
 	flag.StringVar(&outputType, "output", "kubernetes", "Allowed Values {kubernetes|file}")
-	flag.StringVar(&filePath, "file-path", "", "Target file path to write file to")
+	flag.StringVar(&filePath, "file-path", "", "Target file path for sd_config file output")
 	flag.StringVar(&kubeconfig, "kube-config", "", "Path to a kubeconfig file")
 	flag.StringVar(&namespace, "kube-namespace", "", "Namespace where to create or update configmap (If in cluster and no namespace is provided it tries to detect namespace from incluster config otherwise it uses 'default' namespace)")
 	flag.StringVar(&configmapName, "kube-configmap-name", "", "Name of the configmap to create or update with discovery output")
 	flag.StringVar(&configmapKey, "kube-configmap-key", "", "Name of configmap key to set discovery output to")
-	flag.StringVar(&iaasCSV, "iaas", "", "CSV of Clouds to check [aws/azure]")
-	flag.StringVar(&subscrID, "azure-subsc", "", "Azure Subscription ID to look for VMs")
+	flag.StringVar(&iaasCSV, "iaas", "aws", "CSV of Clouds to check [aws/azure]")
+	flag.StringVar(&subscrID, "azure-subscr", "", "Azure Subscription ID to look for VMs")
 	verbose := flag.Bool("verbose", false, "Print verbose log messages")
 	printVersion := flag.Bool("version", false, "Print version")
 	flag.Parse()
@@ -51,7 +50,6 @@ func main() {
 	flag.Visit(func(f *flag.Flag) {
 		if f.Name == "tagprefix" {
 			tagPrefix = true
-
 		}
 	})
 	if *verbose {
@@ -102,7 +100,10 @@ func main() {
 			getOutput(d, o)
 		case "azure":
 			log.Info("starting azure discovery")
-
+			if subscrID == "" {
+				log.Errorf("Azure set as target but no subscription provided. Use --azure-subscr")
+				os.Exit(1)
+			}
 			d := azurediscovery.DiscoveryClientAZURE{
 				TagPrefix:    tagPrefix,
 				Tag:          tag,
@@ -115,7 +116,7 @@ func main() {
 }
 func validateArg(field string, arg string, allowedValues []string) {
 	if !sliceContains(arg, allowedValues) {
-		log.Error(fmt.Sprintf("Field %v has allowed values %v but got %s", field, allowedValues, arg))
+		log.Errorf("Field %v has allowed values %v but got %s", field, allowedValues, arg)
 		os.Exit(1)
 	}
 }
