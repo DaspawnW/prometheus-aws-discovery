@@ -85,6 +85,7 @@ func main() {
 		}
 		o = k8s
 	}
+	validateArg("outputtype", outputType, []string{"kubernetes", "file", "stdout"})
 
 	for _, runInfra := range records[0] {
 		log.Info(runInfra)
@@ -92,8 +93,6 @@ func main() {
 		switch runInfra {
 		case "aws":
 			log.Info("starting aws discovery")
-			validateArg("outputtype", outputType, []string{"kubernetes", "file", "stdout"})
-			log.Info("Start discovery of ec2 instances")
 			clients = append(clients, &awsdiscovery.DiscoveryClientAWS{
 				TagPrefix: tagPrefix,
 				Tag:       tag,
