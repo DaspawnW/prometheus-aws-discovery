@@ -90,20 +90,6 @@ func (d DiscoveryClientAZURE) GetInstances() ([]discovery.Instance, error) {
 				}
 
 			}
-			// for vmssInstance, err := vmssinstanceClient.ListComplete(context.Background(), rg, *vmss.Name, "", "", ""); vmssInstance.NotDone(); err = vmssInstance.Next() {
-			// 	if err != nil {
-			// 		log.Error(err)
-			// 		return nil, err
-			// 	}
-
-			// 	// print out the ID of vmssInstance
-			// 	log.Debugf("Instance ID %v", *vmssInstance.Value().ID)
-			// 	if err != nil {
-			// 		log.Error(err)
-			// 		return nil, err
-			// 	}
-
-			// }
 		}
 	}
 
