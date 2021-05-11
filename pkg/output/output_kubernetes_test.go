@@ -1,31 +1,45 @@
-package outputkubernetes
+package output
 
 import (
 	"context"
 	"testing"
 
-	"github.com/daspawnw/prometheus-aws-discovery/pkg/endpoints"
-	"github.com/daspawnw/prometheus-aws-discovery/pkg/libtesting"
+	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	fake "k8s.io/client-go/kubernetes/fake"
 )
 
+var iList = []discovery.Instance{
+	{
+		InstanceType: "t2.small",
+		PrivateIP:    "127.0.0.2",
+		Tags: map[string]string{
+			"test": "tags",
+		},
+		Metrics: []discovery.InstanceMetrics{
+			{
+				Name:   "someName",
+				Port:   8888,
+				Path:   "/metrics",
+				Scheme: "https",
+			},
+		},
+	},
+}
+
 func TestWriteShouldCreateConfigmap(t *testing.T) {
 	var clientset kubernetes.Interface
 	clientset = fake.NewSimpleClientset()
 
 	o := OutputKubernetes{
-		clientset:      clientset,
+		Clientset:      clientset,
 		ConfigMapField: "discovery",
 		ConfigMapName:  "testcm",
 		Namespace:      "default",
 	}
 
-	iList := endpoints.DiscoveredInstances{
-		Instances: libtesting.InstanceList(),
-	}
 	o.Write(iList)
 
 	resp, _ := clientset.CoreV1().ConfigMaps("default").Get(context.TODO(), "testcm", metav1.GetOptions{})
@@ -52,14 +66,12 @@ func TestWriteShouldUpdateConfigmap(t *testing.T) {
 	})
 
 	o := OutputKubernetes{
-		clientset:      clientset,
+		Clientset:      clientset,
 		ConfigMapField: "discovery",
 		ConfigMapName:  "testcm",
 		Namespace:      "default",
 	}
-	iList := endpoints.DiscoveredInstances{
-		Instances: libtesting.InstanceList(),
-	}
+
 	o.Write(iList)
 
 	resp, _ := clientset.CoreV1().ConfigMaps("default").Get(context.TODO(), "testcm", metav1.GetOptions{})

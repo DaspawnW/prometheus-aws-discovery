@@ -1,4 +1,4 @@
-package endpoints
+package discovery
 
 import (
 	"encoding/json"
@@ -14,14 +14,10 @@ type Instance struct {
 }
 
 type InstanceMetrics struct {
-	Name   string
-	Port   int64
-	Path   string
-	Scheme string
-}
-
-type DiscoveredInstances struct {
-	Instances []Instance
+	Name   string `json:"name"`
+	Port   int64  `json:"port"`
+	Path   string `json:"path"`
+	Scheme string `json:"scheme"`
 }
 
 type outputFormat struct {
@@ -29,10 +25,10 @@ type outputFormat struct {
 	Labels  map[string]string `json:"labels"`
 }
 
-func ToJSONString(d DiscoveredInstances) ([]byte, error) {
+func TargetConfigBytes(d []Instance) ([]byte, error) {
 	outputList := []outputFormat{}
 
-	for _, instance := range d.Instances {
+	for _, instance := range d {
 		for _, metric := range instance.Metrics {
 			targetHost := fmt.Sprintf("%s:%d", instance.PrivateIP, metric.Port)
 			l := labels(instance.Tags, targetHost, metric.Path, metric.Name, metric.Scheme)
