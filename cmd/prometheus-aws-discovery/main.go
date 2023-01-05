@@ -31,16 +31,20 @@ func main() {
 	var namespace string
 	var configmapName string
 	var configmapKey string
+	var secretName string
+	var secretKey string
 	var subscrID string
 
 	flag.StringVar(&tag, "tagprefix", "prom/scrape", "Tag-Key-Prefix used for exporter config (V1-Tag)")
 	flag.StringVar(&tag, "tag", "", "Tag-Key used to look for exporter data (V2-Tag)")
-	flag.StringVar(&outputType, "output", "kubernetes", "Allowed Values {kubernetes|file}")
+	flag.StringVar(&outputType, "output", "kubernetes", "Allowed Values {stdout|kubernetes|file|kubernetes-configmap|kubernetes-secret}")
 	flag.StringVar(&filePath, "file-path", "", "Target file path for sd_config file output")
 	flag.StringVar(&kubeconfig, "kube-config", "", "Path to a kubeconfig file")
 	flag.StringVar(&namespace, "kube-namespace", "", "Namespace where to create or update configmap (If in cluster and no namespace is provided it tries to detect namespace from incluster config otherwise it uses 'default' namespace)")
 	flag.StringVar(&configmapName, "kube-configmap-name", "", "Name of the configmap to create or update with discovery output")
 	flag.StringVar(&configmapKey, "kube-configmap-key", "", "Name of configmap key to set discovery output to")
+	flag.StringVar(&secretName, "kube-secret-name", "", "Name of the secret to create or update with discovery output")
+	flag.StringVar(&secretKey, "kube-secret-key", "", "Name of secret key to set discovery output to")
 	flag.StringVar(&iaasCSV, "iaas", "aws", "CSV of Clouds to check [aws/azure] e.g. aws,azure ")
 	flag.StringVar(&subscrID, "azure-subscr", "", "Azure Subscription ID to look for VMs")
 	verbose := flag.Bool("verbose", false, "Print verbose log messages")
@@ -65,10 +69,10 @@ func main() {
 	log.Info("Infra " + iaasCSV)
 	infraReader := csv.NewReader(strings.NewReader(iaasCSV))
 	records, err := infraReader.ReadAll()
-
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	var o output.Output
 	switch outputType {
 	case "stdout":
@@ -77,15 +81,23 @@ func main() {
 	case "file":
 		log.Info("Configured file as output target")
 		o = output.OutputFile{FilePath: filePath}
-	default:
-		log.Info("Configured kubernetes as output target")
-		k8s, err := output.NewOutputKubernetes(kubeconfig, namespace, configmapName, configmapKey)
+	case "kubernetes", "kubernetes-configmap":
+		log.Info("Configured kubernetes configmap as output target")
+		k8s, err := output.NewOutputKubernetes(kubeconfig, output.KUBERNETES_CONFIGMAP, namespace, configmapName, configmapKey)
 		if err != nil {
 			panic(err)
 		}
 		o = k8s
+	case "kubernetes-secret":
+		log.Info("Configured kubernetes secret as output target")
+		k8s, err := output.NewOutputKubernetes(kubeconfig, output.KUBERNETES_SECRET, namespace, configmapName, configmapKey)
+		if err != nil {
+			panic(err)
+		}
+		o = k8s
+	default:
+		log.Fatal("Invalid output type provided")
 	}
-	validateArg("outputtype", outputType, []string{"kubernetes", "file", "stdout"})
 
 	for _, runInfra := range records[0] {
 		log.Info(runInfra)
@@ -115,21 +127,7 @@ func main() {
 	}
 
 }
-func validateArg(field string, arg string, allowedValues []string) {
-	if !sliceContains(arg, allowedValues) {
-		log.Errorf("Field %v has allowed values %v but got %s", field, allowedValues, arg)
-		os.Exit(1)
-	}
-}
 
-func sliceContains(arg string, allowedValues []string) bool {
-	for _, v := range allowedValues {
-		if v == arg {
-			return true
-		}
-	}
-	return false
-}
 func getOutput(clients []discovery.DiscoveryClient, output output.Output) {
 	outputInstances := []discovery.Instance{}
 	for _, d := range clients {

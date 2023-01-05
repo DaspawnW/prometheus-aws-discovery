@@ -1,29 +1,29 @@
 package output
 
 import (
-	"context"
-	"io/ioutil"
-	"strings"
-
+	"errors"
+	"fmt"
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
+	"github.com/daspawnw/prometheus-aws-discovery/pkg/output/resource"
 	log "github.com/sirupsen/logrus"
-	apiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type OutputKubernetes struct {
-	Clientset      kubernetes.Interface
-	Namespace      string
-	ConfigMapName  string
-	ConfigMapField string
+	resourceOperation resource.KubernetesResource
+	Namespace         string
+	ResourceName      string
+	ResourceField     string
 }
 
-func NewOutputKubernetes(kubeconfig string, namespace string, cmName string, cmField string) (*OutputKubernetes, error) {
+type OutputKubernetesResourceType string
+
+const (
+	KUBERNETES_CONFIGMAP OutputKubernetesResourceType = "configmap"
+	KUBERNETES_SECRET    OutputKubernetesResourceType = "secret"
+)
+
+func NewOutputKubernetes(kubeconfig string, resourceType OutputKubernetesResourceType, namespace string, resourceName string, resourceField string) (*OutputKubernetes, error) {
 	config, err := getClientConfig(kubeconfig)
 	if err != nil {
 		log.Error("Failed to configure k8s client")
@@ -36,11 +36,21 @@ func NewOutputKubernetes(kubeconfig string, namespace string, cmName string, cmF
 		return nil, err
 	}
 
+	var r resource.KubernetesResource
+	if resourceType == KUBERNETES_CONFIGMAP {
+		r = resource.NewKubernetesResourceConfigmap(clientset)
+	} else if resourceType == KUBERNETES_SECRET {
+		r = resource.NewKubernetesResourceSecret(clientset)
+	} else {
+		log.Error("Invalid Kubernetes output format provided")
+		return nil, errors.New(fmt.Sprintf("Invalid Kubernetes output format provided %s", resourceType))
+	}
+
 	return &OutputKubernetes{
-		Clientset:      clientset,
-		ConfigMapField: cmField,
-		ConfigMapName:  cmName,
-		Namespace:      namespace,
+		resourceOperation: r,
+		ResourceField:     resourceField,
+		ResourceName:      resourceName,
+		Namespace:         namespace,
 	}, nil
 }
 
@@ -52,25 +62,23 @@ func (o OutputKubernetes) Write(instances []discovery.Instance) error {
 	}
 
 	ns := o.getNamespace()
-	cm, err := loadConfigmap(o.Clientset, ns, o.ConfigMapName)
+
+	exists, err := o.resourceOperation.Exists(ns, o.ResourceName)
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			log.Error("Failed to load configmap from k8s", err)
-			return err
-		}
-		log.Infof("No configmap with name %s in namespace %s detected", o.ConfigMapName, ns)
+		log.Error("Failed to load from k8s", err)
+		return err
 	}
 
-	if cm != nil {
-		err := updateConfigmap(o.Clientset, cm, o.ConfigMapField, string(output))
+	if exists == true {
+		err := o.resourceOperation.Update(ns, o.ResourceName, o.ResourceField, string(output))
 		if err != nil {
-			log.Error("Failed to update configmap")
+			log.Error("Failed to update resource")
 		}
 		return err
 	} else {
-		err := createConfigmap(o.Clientset, o.ConfigMapName, ns, o.ConfigMapField, string(output))
+		err := o.resourceOperation.Create(ns, o.ResourceName, o.ResourceField, string(output))
 		if err != nil {
-			log.Error("Failed to create configmap")
+			log.Error("Failed to create resource")
 		}
 		return err
 	}
@@ -82,55 +90,5 @@ func (o OutputKubernetes) getNamespace() string {
 		return o.Namespace
 	}
 
-	nsBytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-	if err != nil {
-		log.Debugf("No Namespace provided and no namespace found in-cluster path, using %s", apiv1.NamespaceDefault)
-		return apiv1.NamespaceDefault
-	}
-
-	log.Debug("Detected namespace in-cluster path")
-	return strings.TrimSpace(string(nsBytes))
-}
-
-func createConfigmap(clientset kubernetes.Interface, name string, namespace string, field string, data string) error {
-	cmData := make(map[string]string)
-	cmData[field] = data
-	cm := &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Data: cmData,
-	}
-	log.Debugf("Create configmap with name %s in namespace %s", cm.ObjectMeta.Name, cm.ObjectMeta.Namespace)
-	_, err := clientset.CoreV1().ConfigMaps(namespace).Create(context.TODO(), cm, metav1.CreateOptions{})
-	return err
-}
-
-func updateConfigmap(clientset kubernetes.Interface, cm *v1.ConfigMap, field string, data string) error {
-	if cm.Data == nil {
-		cm.Data = make(map[string]string)
-	}
-	cm.Data[field] = data
-	log.Debugf("Update configmap %s in namespace %s", cm.ObjectMeta.Namespace, cm.ObjectMeta.Name)
-	_, err := clientset.CoreV1().ConfigMaps(cm.ObjectMeta.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
-	return err
-}
-
-func loadConfigmap(clientset kubernetes.Interface, namespace string, name string) (*v1.ConfigMap, error) {
-	cm, err := clientset.CoreV1().ConfigMaps(namespace).Get(context.TODO(), name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return cm, nil
-}
-
-func getClientConfig(kubeconfig string) (*rest.Config, error) {
-	if kubeconfig != "" {
-		log.Debug("Use kubeconfig provided by commandline flag")
-		return clientcmd.BuildConfigFromFlags("", kubeconfig)
-	}
-
-	log.Debug("Use in-cluster k8s configuration")
-	return rest.InClusterConfig()
+	return getNamespaceByServiceAccount()
 }

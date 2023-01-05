@@ -2,6 +2,7 @@ package output
 
 import (
 	"context"
+	"github.com/daspawnw/prometheus-aws-discovery/pkg/output/resource"
 	"testing"
 
 	"github.com/daspawnw/prometheus-aws-discovery/pkg/discovery"
@@ -33,11 +34,12 @@ func TestWriteShouldCreateConfigmap(t *testing.T) {
 	var clientset kubernetes.Interface
 	clientset = fake.NewSimpleClientset()
 
+	r := resource.NewKubernetesResourceConfigmap(clientset)
 	o := OutputKubernetes{
-		Clientset:      clientset,
-		ConfigMapField: "discovery",
-		ConfigMapName:  "testcm",
-		Namespace:      "default",
+		resourceOperation: r,
+		ResourceField:     "discovery",
+		ResourceName:      "testcm",
+		Namespace:         "default",
 	}
 
 	o.Write(iList)
@@ -65,11 +67,12 @@ func TestWriteShouldUpdateConfigmap(t *testing.T) {
 		Data: cmData,
 	})
 
+	r := resource.NewKubernetesResourceConfigmap(clientset)
 	o := OutputKubernetes{
-		Clientset:      clientset,
-		ConfigMapField: "discovery",
-		ConfigMapName:  "testcm",
-		Namespace:      "default",
+		resourceOperation: r,
+		ResourceField:     "discovery",
+		ResourceName:      "testcm",
+		Namespace:         "default",
 	}
 
 	o.Write(iList)
