@@ -90,7 +90,7 @@ func main() {
 		o = k8s
 	case "kubernetes-secret":
 		log.Info("Configured kubernetes secret as output target")
-		k8s, err := output.NewOutputKubernetes(kubeconfig, output.KUBERNETES_SECRET, namespace, configmapName, configmapKey)
+		k8s, err := output.NewOutputKubernetes(kubeconfig, output.KUBERNETES_SECRET, namespace, secretName, secretKey)
 		if err != nil {
 			panic(err)
 		}

@@ -2,7 +2,6 @@ package resource
 
 import (
 	"context"
-	"encoding/base64"
 	log "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	e "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +21,7 @@ func NewKubernetesResourceSecret(clientset kubernetes.Interface) KubernetesResou
 
 func (k KubernetesResourceSecret) Create(namespace string, name string, field string, data string) error {
 	cmData := make(map[string][]byte)
-	cmData[field] = toBase64(data)
+	cmData[field] = []byte(data)
 	cm := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -46,7 +45,7 @@ func (k KubernetesResourceSecret) Update(namespace string, name string, field st
 		cm.Data = make(map[string][]byte)
 	}
 
-	cm.Data[field] = toBase64(data)
+	cm.Data[field] = []byte(data)
 
 	log.Debugf("Update secret %s in namespace %s", cm.ObjectMeta.Namespace, cm.ObjectMeta.Name)
 	_, saveErr := k.clientset.CoreV1().Secrets(cm.ObjectMeta.Namespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
@@ -65,10 +64,4 @@ func (k KubernetesResourceSecret) Exists(namespace string, name string) (bool, e
 	}
 
 	return true, nil
-}
-
-func toBase64(value string) []byte {
-	base64Text := make([]byte, base64.StdEncoding.EncodedLen(len(value)))
-	base64.StdEncoding.Encode(base64Text, []byte(value))
-	return base64Text
 }
