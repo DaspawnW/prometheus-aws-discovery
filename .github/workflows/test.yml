@@ -8,24 +8,13 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@v4
       with:
         go-version: 1.19.x
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Test
       run: go test ./...
-
-  sonarqube:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-    - name: SonarCloud Scan
-      uses: sonarsource/sonarcloud-github-action@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   coverage:
     runs-on: ubuntu-latest
@@ -35,7 +24,7 @@ jobs:
       with:
         go-version: 1.19.x
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Calculate coverage
       run: go test -covermode=count -coverprofile=coverage.out ./...
     - name: Convert coverage to lcov
@@ -51,27 +40,30 @@ jobs:
 
   docker:
     name: Docker Build
-
     runs-on: ubuntu-latest
-
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/docker-')
     needs: test
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set output
+        id: vars
+        run: echo ::set-output name=tag::${GITHUB_REF#refs/*/}
 
-      - name: Build and push
-        id: docker_build
-        uses: docker/build-push-action@v2
+      - name: Docker publish
+        uses: daspawnw/docker-multi-build-push-action@master
         with:
-          push: true
-          tags: daspawnw/prometheus-aws-discovery:latest
+          docker-tag: "${{ steps.vars.outputs.tag }}"
+          ghcr-enabled: "true"
+          ghcr-token: "${{ secrets.GITHUB_TOKEN }}"
+          ecr-enabled: "true"
+          ecr-role-to-assume: "${{ secrets.AWS_PUBLIC_ECR_ARN }}"
+          ecr-repository-url: "public.ecr.aws/l2l6k4u5/prometheus-aws-discovery"

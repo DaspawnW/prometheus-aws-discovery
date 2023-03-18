@@ -2,6 +2,11 @@
 
 Prometheus AWS/Azure Discovery provides a more flexible way to discover exporters running on ec2 instances or withing VMSS Instances (Azure VMs currently not covered by binary).
 
+### Note!
+
+Due to Docker's decision to discontinue its Free Teams, I decided to host my Docker images on GHCR (GitHub Container
+Registry) and public ECR (Elastic Container Registry) in the future.
+
 ### AUTH
 
 AWS Auth is done via the AWS go sdk. Meaning it shoud support ENV Vars & Instance Profiles by default [AWS Docs](https://docs.aws.amazon.com/sdk-for-go/api/aws/session/)
