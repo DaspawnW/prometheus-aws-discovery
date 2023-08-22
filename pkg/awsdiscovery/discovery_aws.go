@@ -31,7 +31,7 @@ func (d DiscoveryClientAWS) GetInstances() ([]discovery.Instance, error) {
 		Filters: d.filter(),
 	}
 	if ec2Client == nil {
-		awsSession := session.New()
+		awsSession := session.Must(session.NewSession())
 		awsConfig := &aws.Config{}
 		ec2Client = ec2.New(awsSession, awsConfig)
 	}
