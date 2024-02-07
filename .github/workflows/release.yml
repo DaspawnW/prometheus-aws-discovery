@@ -9,9 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
-        go-version: 1.19.x
+        go-version-file: './go.mod'
     - name: Checkout code
       uses: actions/checkout@v3
 
@@ -19,10 +19,14 @@ jobs:
       id: get_version
       run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
-    - name: Build Asset (linux)
+    - name: Build Asset (linux/amd64)
       run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-X 'main.Version=${{ steps.get_version.outputs.VERSION }}'" -o bin/prometheus-aws-discovery-linux-amd64 ./cmd/prometheus-aws-discovery/...
-    - name: Build Asset (darwin)
+    - name: Build Asset (darwin/amd64)
       run: CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-X 'main.Version=${{ steps.get_version.outputs.VERSION }}'" -o bin/prometheus-aws-discovery-darwin-amd64 ./cmd/prometheus-aws-discovery/...
+    - name: Build Asset (linux/arm64)
+      run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-X 'main.Version=${{ steps.get_version.outputs.VERSION }}'" -o bin/prometheus-aws-discovery-linux-arm64 ./cmd/prometheus-aws-discovery/...
+    - name: Build Asset (darwin/arm64)
+      run: CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-X 'main.Version=${{ steps.get_version.outputs.VERSION }}'" -o bin/prometheus-aws-discovery-darwin-arm64 ./cmd/prometheus-aws-discovery/...
 
     - name: Create Release
       id: create_release
@@ -38,7 +42,7 @@ jobs:
           Build also available as docker image:
           `daspawnw/prometheus-aws-discovery:${{ steps.get_version.outputs.VERSION }}`
 
-    - name: Upload Release Asset (linux)
+    - name: Upload Release Asset (linux/amd64)
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -47,7 +51,7 @@ jobs:
         asset_path: bin/prometheus-aws-discovery-linux-amd64
         asset_name: prometheus-aws-discovery-linux-amd64
         asset_content_type: application/x-executable
-    - name: Upload Release Asset (darwin)
+    - name: Upload Release Asset (darwin/amd64)
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -55,6 +59,24 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: bin/prometheus-aws-discovery-darwin-amd64
         asset_name: prometheus-aws-discovery-darwin-amd64
+        asset_content_type: application/x-mach-binary
+    - name: Upload Release Asset (linux/arm64)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: bin/prometheus-aws-discovery-linux-arm64
+        asset_name: prometheus-aws-discovery-linux-arm64
+        asset_content_type: application/x-executable
+    - name: Upload Release Asset (darwin/arm64)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: bin/prometheus-aws-discovery-darwin-arm64
+        asset_name: prometheus-aws-discovery-darwin-arm64
         asset_content_type: application/x-mach-binary
 
   docker:
@@ -81,6 +103,7 @@ jobs:
       - name: Docker publish
         uses: daspawnw/docker-multi-build-push-action@master
         with:
+          platforms: "linux/amd64,linux/arm64"
           docker-tag: "${{ steps.vars.outputs.tag }}"
           ghcr-enabled: "true"
           ghcr-token: "${{ secrets.GITHUB_TOKEN }}"
