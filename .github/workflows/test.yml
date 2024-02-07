@@ -7,24 +7,24 @@ jobs:
         platform: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.platform }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3    
     - name: Install Go
       uses: actions/setup-go@v5
       with:
         go-version-file: './go.mod'
-    - name: Checkout code
-      uses: actions/checkout@v3
     - name: Test
       run: go test ./...
 
   coverage:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
     - name: Install Go
       uses: actions/setup-go@v5
       with:
         go-version-file: './go.mod'
-    - name: Checkout code
-      uses: actions/checkout@v3
     - name: Calculate coverage
       run: go test -covermode=count -coverprofile=coverage.out ./...
     - name: Convert coverage to lcov
